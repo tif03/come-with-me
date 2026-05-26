@@ -1,22 +1,16 @@
 import { GooglePlace } from "./google"
-import { YelpBusiness } from "./yelp"
 
 const VIBE_TAGS: Record<string, string[]> = {
   cafe:           ["cozy", "aesthetic", "chill", "lowkey"],
   coffee_shop:    ["cozy", "aesthetic", "chill", "lowkey"],
-  bar:            ["vibey", "chaotic", "social"],
-  rooftop_bar:    ["romantic", "elevated", "aesthetic"],
-  park:           ["chill", "lowkey", "romantic", "low-energy"],
-  art_gallery:    ["aesthetic", "chill", "intellectual"],
-  night_market:   ["chaotic", "vibey", "aesthetic"],
-  arcade:         ["chaotic", "fun", "casual"],
   restaurant:     ["romantic", "chill", "social"],
+  meal_takeaway:  ["casual", "lowkey", "chill"],
+  food:           ["social", "chill", "chaotic"],
+  bar:            ["vibey", "chaotic", "social"],
+  night_club:     ["chaotic", "vibey", "social"],
+  night_market:   ["chaotic", "vibey", "aesthetic"],
   dessert:        ["aesthetic", "cozy", "fun"],
   bakery:         ["cozy", "aesthetic", "lowkey"],
-  museum:         ["intellectual", "aesthetic", "chill"],
-  shopping_mall:  ["chaotic", "casual", "social"],
-  spa:            ["low-energy", "romantic", "chill"],
-  movie_theater:  ["chill", "casual", "low-energy"],
 }
 
 interface WeightProfile {
@@ -34,22 +28,12 @@ const WEIGHT_PROFILES: Record<string, WeightProfile> = {
   lowEnergy:  { rating: 0.40, reviewCount: 0.10, vibeMatch: 0.40, viral: 0.10 },
 }
 
-function ratingScore(google: GooglePlace, yelp: YelpBusiness | null): number {
-  if (yelp) {
-    return (google.rating / 5) * 0.4 + (yelp.rating / 5) * 0.6
-  }
+function ratingScore(google: GooglePlace): number {
   return google.rating / 5
 }
 
-function reviewCountScore(
-  google: GooglePlace,
-  yelp: YelpBusiness | null,
-  maxReviewCount: number
-): number {
-  const count = yelp
-    ? Math.max(google.reviewCount, yelp.reviewCount)
-    : google.reviewCount
-  return Math.log(count + 1) / Math.log(maxReviewCount + 1)
+function reviewCountScore(google: GooglePlace, maxReviewCount: number): number {
+  return Math.log(google.reviewCount + 1) / Math.log(maxReviewCount + 1)
 }
 
 function vibeMatchScore(types: string[], vibeTags: string[]): number {
@@ -68,14 +52,11 @@ function viralScore(google: GooglePlace): number {
 
 export interface ScoredPlace {
   google: GooglePlace
-  yelp: YelpBusiness | null
   score: number
-  yelpEnriched: boolean
 }
 
 export function scorePlace(
   google: GooglePlace,
-  yelp: YelpBusiness | null,
   vibeTags: string[],
   vibe: string,
   maxReviewCount: number
@@ -83,8 +64,8 @@ export function scorePlace(
   const w: WeightProfile = (WEIGHT_PROFILES[vibe] ?? WEIGHT_PROFILES.chill) as WeightProfile
 
   const signals = {
-    rating:      ratingScore(google, yelp),
-    reviewCount: reviewCountScore(google, yelp, maxReviewCount),
+    rating:      ratingScore(google),
+    reviewCount: reviewCountScore(google, maxReviewCount),
     vibeMatch:   vibeMatchScore(google.types, vibeTags),
     viral:       viralScore(google),
   }
@@ -95,5 +76,5 @@ export function scorePlace(
     w.vibeMatch   * signals.vibeMatch   +
     w.viral       * signals.viral
 
-  return { google, yelp, score, yelpEnriched: yelp !== null }
+  return { google, score }
 }

@@ -20,7 +20,8 @@ export interface GooglePlace {
 export async function searchPlaces(
   lat: number,
   lng: number,
-  placeTypes: string[]
+  placeTypes: string[],
+  maxPrice?: number
 ): Promise<GooglePlace[]> {
   const type = placeTypes[0] ?? "restaurant"
 
@@ -30,6 +31,7 @@ export async function searchPlaces(
       radius: 2000,
       type,
       key: KEY,
+      ...(maxPrice != null && { maxprice: maxPrice }),
     },
   })
 
