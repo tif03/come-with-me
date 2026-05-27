@@ -28,22 +28,22 @@ const WEIGHT_PROFILES: Record<string, WeightProfile> = {
   lowEnergy:  { rating: 0.40, reviewCount: 0.10, vibeMatch: 0.40, viral: 0.10 },
 }
 
-function ratingScore(google: GooglePlace): number {
+export function ratingScore(google: GooglePlace): number {
   return google.rating / 5
 }
 
-function reviewCountScore(google: GooglePlace, maxReviewCount: number): number {
+export function reviewCountScore(google: GooglePlace, maxReviewCount: number): number {
   return Math.log(google.reviewCount + 1) / Math.log(maxReviewCount + 1)
 }
 
-function vibeMatchScore(types: string[], vibeTags: string[]): number {
+export function vibeMatchScore(types: string[], vibeTags: string[]): number {
   if (!vibeTags.length) return 0
   const placeTags = types.flatMap(t => VIBE_TAGS[t] ?? [])
   const matches = vibeTags.filter(t => placeTags.includes(t))
   return matches.length / vibeTags.length
 }
 
-function viralScore(google: GooglePlace): number {
+export function viralScore(google: GooglePlace): number {
   if (google.reviewCount < 50) return 0.8
   if (google.reviewCount < 200) return 0.6
   if (google.reviewCount < 1000) return 0.4
