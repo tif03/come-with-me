@@ -5,6 +5,16 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>come-with-me</title>
+    <script>
+      // Load Google Maps JS API with Places library
+      (function() {
+        var key = '%VITE_GOOGLE_MAPS_API_KEY%';
+        var script = document.createElement('script');
+        script.src = 'https://maps.googleapis.com/maps/api/js?key=' + key + '&libraries=places';
+        script.async = true;
+        document.head.appendChild(script);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
