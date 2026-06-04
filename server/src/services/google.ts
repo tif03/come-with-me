@@ -11,6 +11,7 @@ export interface GooglePlace {
   rating: number
   reviewCount: number
   priceLevel: number | null
+  photoCount: number
   types: string[]
   lat: number
   lng: number
@@ -45,6 +46,7 @@ export async function searchPlaces(
     rating: p.rating ?? 0,
     reviewCount: p.user_ratings_total ?? 0,
     priceLevel: p.price_level ?? null,
+    photoCount: (p.photos ?? []).length,
     types: p.types ?? [],
     lat: p.geometry.location.lat,
     lng: p.geometry.location.lng,

@@ -13,15 +13,54 @@ const VIBES = [
   { id: 'aesthetic', label: 'Aesthetic' },
   { id: 'chaotic',   label: 'Chaotic' },
   { id: 'chill',     label: 'Chill' },
-  { id: 'lowEnergy', label: 'Low Energy' },
 ]
 
-const BUDGETS = [
-  { id: '$',    label: '$' },
-  { id: '$$',   label: '$$' },
-  { id: '$$$',  label: '$$$' },
-  { id: '$$$$', label: '$$$$' },
-]
+const BUDGET_LABELS = ['any', '$', '$$', '$$$', '$$$$']
+
+// Thumb is 20px wide; its center travels from 10px to (W-10px).
+// Tick i of 4 lands at: calc(i*25% + (10 - i*5)px)
+// Fill width to thumb center: same formula applied to current value.
+const THUMB_R = 10 // half of 20px thumb
+
+function BudgetSlider({ value, onChange }) {
+  const fillWidth = `calc(${value * 25}% + ${THUMB_R - value * THUMB_R / 2}px)`
+
+  return (
+    <div className="toggle-group">
+      <p className="toggle-label">
+        budget?&nbsp;
+        <span className="budget-value">
+          {value === 0 ? 'no limit' : BUDGET_LABELS[value] + ' and under'}
+        </span>
+      </p>
+      <div className="budget-slider-wrap">
+        <div className="budget-track-bg">
+          {value > 0 && <div className="budget-track-fill" style={{ width: fillWidth }} />}
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={4}
+          step={1}
+          value={value}
+          onChange={e => onChange(Number(e.target.value))}
+          className="budget-slider"
+        />
+        <div className="budget-ticks">
+          {BUDGET_LABELS.map((label, i) => (
+            <span
+              key={i}
+              className={`budget-tick ${value > 0 && i <= value ? 'active' : ''}`}
+              style={{ left: `calc(${i * 25}% + ${THUMB_R - i * (THUMB_R / 2)}px)` }}
+            >
+              {label}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function ToggleGroup({ label, options, value, onChange }) {
   return (
@@ -153,13 +192,13 @@ function MapLocationPicker({ onCoordsChange }) {
 function App() {
   const [category, setCategory] = useState(null)
   const [vibe, setVibe]         = useState(null)
-  const [budget, setBudget]     = useState(null)
+  const [budget, setBudget]     = useState(0)
   const [results, setResults]   = useState(null)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState(null)
   const [mapCoords, setMapCoords] = useState(null)
 
-  const canSearch = !!(category && vibe && budget && mapCoords)
+  const canSearch = !!(category && vibe && mapCoords)
 
   async function fetchResults(lat, lng) {
     try {
@@ -211,12 +250,7 @@ function App() {
           value={vibe}
           onChange={setVibe}
         />
-        <ToggleGroup
-          label="budget?"
-          options={BUDGETS}
-          value={budget}
-          onChange={setBudget}
-        />
+        <BudgetSlider value={budget} onChange={setBudget} />
       </div>
 
       <button

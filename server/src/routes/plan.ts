@@ -11,27 +11,12 @@ const CATEGORY_TYPES: Record<string, string[]> = {
   barsDrinks:    ["bar"],
 }
 
-const VIBE_TAG_MAP: Record<string, string[]> = {
-  romantic:  ["romantic", "cozy"],
-  aesthetic: ["aesthetic", "vibey"],
-  chaotic:   ["chaotic", "social", "vibey"],
-  chill:     ["chill", "lowkey", "casual"],
-  lowEnergy: ["cozy", "lowkey", "chill"],
-}
-
-const BUDGET_MAP: Record<string, number> = {
-  "$":    1,
-  "$$":   2,
-  "$$$":  3,
-  "$$$$": 4,
-}
-
 router.post("/", async (req, res) => {
   const { vibe, category, budget, lat, lng } = req.body
 
-  const types    = CATEGORY_TYPES[category]  ?? ["restaurant"]
-  const vibeTags = VIBE_TAG_MAP[vibe]        ?? ["chill", "lowkey", "casual"]
-  const maxPrice = BUDGET_MAP[budget]        ?? 4
+  const types    = CATEGORY_TYPES[category] ?? ["restaurant"]
+  // budget is 0 (any) or 1–4; 0/missing means no price filter
+  const maxPrice = (typeof budget === "number" && budget > 0) ? budget : 4
 
   try {
     const seenIds = new Set<string>()
@@ -50,7 +35,7 @@ router.post("/", async (req, res) => {
     const maxReviewCount = Math.max(...allPlaces.map(p => p.reviewCount), 1)
 
     const scored = allPlaces
-      .map(p => scorePlace(p, vibeTags, vibe, maxReviewCount))
+      .map(p => scorePlace(p, vibe, maxReviewCount))
       .sort((a, b) => b.score - a.score)
       .slice(0, 10)
 
