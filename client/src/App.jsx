@@ -1,20 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
 
-const CATEGORIES = [
-  { id: 'restaurants',   label: 'Restaurants' },
-  { id: 'bakeryDessert', label: 'Bakery & Dessert' },
-  { id: 'cafeCoffee',    label: 'Cafe & Coffee' },
-  { id: 'barsDrinks',    label: 'Bars & Drinks' },
-]
-
-const VIBES = [
-  { id: 'romantic',  label: 'Romantic' },
-  { id: 'aesthetic', label: 'Aesthetic' },
-  { id: 'chaotic',   label: 'Chaotic' },
-  { id: 'chill',     label: 'Chill' },
-]
-
 const BUDGET_LABELS = ['any', '$', '$$', '$$$', '$$$$']
 
 // Thumb is 20px wide; its center travels from 10px to (W-10px).
@@ -62,23 +48,26 @@ function BudgetSlider({ value, onChange }) {
   )
 }
 
-function ToggleGroup({ label, options, value, onChange }) {
-  return (
-    <div className="toggle-group">
-      <p className="toggle-label">{label}</p>
-      <div className="toggle-options">
-        {options.map(opt => (
-          <button
-            key={opt.id}
-            className={`toggle-btn ${value === opt.id ? 'active' : ''}`}
-            onClick={() => onChange(opt.id)}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
+function MiniMap({ lat, lng, name }) {
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const cancel = whenMapsReady(() => {
+      if (!ref.current) return
+      const map = new window.google.maps.Map(ref.current, {
+        center: { lat, lng },
+        zoom: 15,
+        disableDefaultUI: true,
+        gestureHandling: 'none',
+        zoomControl: false,
+        styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }],
+      })
+      new window.google.maps.Marker({ position: { lat, lng }, map, title: name })
+    })
+    return cancel
+  }, [lat, lng, name])
+
+  return <div ref={ref} className="result-mini-map" />
 }
 
 function whenMapsReady(cb) {
@@ -190,22 +179,22 @@ function MapLocationPicker({ onCoordsChange }) {
 }
 
 function App() {
-  const [category, setCategory] = useState(null)
-  const [vibe, setVibe]         = useState(null)
-  const [budget, setBudget]     = useState(0)
-  const [results, setResults]   = useState(null)
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState(null)
+  const [query, setQuery]         = useState('')
+  const [budget, setBudget]       = useState(0)
+  const [results, setResults]     = useState(null)
+  const [loading, setLoading]     = useState(false)
+  const [error, setError]         = useState(null)
   const [mapCoords, setMapCoords] = useState(null)
+  const [openResult, setOpenResult] = useState(null)
 
-  const canSearch = !!(category && vibe && mapCoords)
+  const canSearch = !!(query.trim() && mapCoords)
 
   async function fetchResults(lat, lng) {
     try {
       const res = await fetch('http://localhost:3001/api/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category, vibe, budget, lat, lng }),
+        body: JSON.stringify({ query, budget, lat, lng }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Something went wrong')
@@ -238,18 +227,16 @@ function App() {
           <MapLocationPicker onCoordsChange={setMapCoords} />
         </div>
 
-        <ToggleGroup
-          label="what are you looking for?"
-          options={CATEGORIES}
-          value={category}
-          onChange={setCategory}
-        />
-        <ToggleGroup
-          label="what's the vibe?"
-          options={VIBES}
-          value={vibe}
-          onChange={setVibe}
-        />
+        <div className="toggle-group">
+          <p className="toggle-label">what's the vibe?</p>
+          <textarea
+            className="vibe-input"
+            placeholder="e.g. cafe with matcha or coffee and space to sit and study"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            rows={3}
+          />
+        </div>
         <BudgetSlider value={budget} onChange={setBudget} />
       </div>
 
@@ -269,18 +256,43 @@ function App() {
 
       {results && results.length > 0 && (
         <ol className="results">
-          {results.map((place) => (
-            <li key={place.rank} className="result-item">
-              <span className="result-name">{place.name}</span>
-              <span className="result-meta">
-                <span className="result-rating">★ {place.rating.toFixed(1)}</span>
-                {place.priceLevel && (
-                  <span className="result-price">{'$'.repeat(place.priceLevel)}</span>
+          {results.map((place) => {
+            const isOpen = openResult === place.rank
+            return (
+              <li key={place.rank} className="result-item">
+                <div
+                  className="result-header"
+                  onClick={() => setOpenResult(isOpen ? null : place.rank)}
+                >
+                  <div className="result-header-text">
+                    <div className="result-name">{place.name}</div>
+                    <div className="result-meta">
+                      {place.rating > 0 && (
+                        <span className="result-rating">★ {place.rating.toFixed(1)}</span>
+                      )}
+                      {place.priceLevel && (
+                        <span className="result-price">{'$'.repeat(place.priceLevel)}</span>
+                      )}
+                    </div>
+                  </div>
+                  <svg
+                    className={`result-chevron ${isOpen ? 'open' : ''}`}
+                    width="16" height="16" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" strokeWidth="2"
+                    strokeLinecap="round" strokeLinejoin="round"
+                  >
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </div>
+                {isOpen && (
+                  <div className="result-expanded">
+                    <span className="result-address">{place.address}</span>
+                    <MiniMap lat={place.lat} lng={place.lng} name={place.name} />
+                  </div>
                 )}
-              </span>
-              <span className="result-address">{place.address}</span>
-            </li>
-          ))}
+              </li>
+            )
+          })}
         </ol>
       )}
     </div>
